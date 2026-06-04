@@ -296,6 +296,8 @@ body {
 }
 .reply-x:hover { color: var(--red); }
 .msg-name, .msg-ava { cursor: pointer; }
+.msg-name { color: var(--blue); }
+.msg-ava-fb, .umodal-ava-fb, .profile-ava-fb { background: var(--blue); }
 
 /* ─── PROFILE ─────────────────────────────────────── */
 .profile-wrap { max-width: 640px; margin: 0 auto; }
@@ -1549,20 +1551,6 @@ function fmtTime(ts){
   const d=new Date(ts);
   return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
 }
-function autoColor(key){
-  key=String(key||'?');
-  let h=0;
-  for(let i=0;i<key.length;i++)h=(h*31+key.charCodeAt(i))%360;
-  return `hsl(${h},62%,58%)`;
-}
-function userColorOf(m){
-  if(chatMode==='firebase'&&m.uid){
-    const u=usersMap[m.uid];
-    if(u&&u.color)return u.color;   // profildagi rang ustun
-    return autoColor(m.uid);
-  }
-  return autoColor(m.name||'?');
-}
 // xabar egasini id orqali /users dan olamiz, bo'lmasa — eski xabardagi qiymat (fallback)
 function authorOf(m){
   const u=(m.uid&&usersMap[m.uid])||{};
@@ -1578,10 +1566,10 @@ function favLineFor(uid){
   const flags=teams.map(n=>teamInfoOf(n).f||'⚽').join(' ');
   return `<div class="msg-fav" title="${escapeHtml(teams.join(', '))}">${flags}</div>`;
 }
-function avatarHtml(photo,name,color){
+function avatarHtml(photo,name){
   if(photo)return `<img class="msg-ava" src="${escapeHtml(photo)}" alt="" referrerpolicy="no-referrer">`;
   const ini=escapeHtml((String(name||'?').trim().charAt(0)||'?').toUpperCase());
-  return `<div class="msg-ava msg-ava-fb" style="background:${color}">${ini}</div>`;
+  return `<div class="msg-ava msg-ava-fb">${ini}</div>`;
 }
 function renderChat(){
   const box=document.getElementById('chat-msgs');
@@ -1604,26 +1592,24 @@ function renderChat(){
     // bir xil yuboruvchi ketma-ket yozsa — ism/avatar faqat birinchisida
     // (javob (reply) bo'lsa ham guruhni uzmaymiz)
     const grouped=sameSender(msgs[i-1],m);
-    const color=userColorOf(m);
     const a=authorOf(m);
     const replyBtn=canAct?`<button class="msg-reply" onclick="replyToMessage(${i})" title="Javob berish" aria-label="Javob berish"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>`:'';
     const replyName=m.replyTo?(m.replyTo.name||nameByUid(m.replyTo.uid)):'';
     const quote=m.replyTo?`<div class="msg-reply-quote"><b>${escapeHtml(replyName)}</b><br>${escapeHtml(m.replyTo.text)}</div>`:'';
     // o'z xabarlarim: ism va avatar yashirin (o'ngda, oltin — shundoq ham bilinadi)
     const uclick=m.uid?` onclick="openUserProfile('${m.uid}')"`:'';
-    const avaSlot=mine?'':`<div class="msg-ava-slot"${grouped?'':uclick}>${grouped?'':avatarHtml(a.photo,a.name,color)}</div>`;
+    const avaSlot=mine?'':`<div class="msg-ava-slot"${grouped?'':uclick}>${grouped?'':avatarHtml(a.photo,a.name)}</div>`;
     const meta=mine
       ? (grouped?'':`<div class="msg-meta">${fmtTime(m.ts)}</div>`)
-      : (grouped?'':`<div class="msg-meta"><span class="msg-name" style="color:${color}"${uclick}>${escapeHtml(a.name)}</span> · ${fmtTime(m.ts)}</div>`);
+      : (grouped?'':`<div class="msg-meta"><span class="msg-name"${uclick}>${escapeHtml(a.name)}</span> · ${fmtTime(m.ts)}</div>`);
     const fav=(!mine&&!grouped)?favLineFor(m.uid):'';
-    const bubbleStyle=mine?'':` style="border-left:3px solid ${color}"`;
     return `<div class="msg${mine?' me':''}${grouped?' grouped':''}">
       ${avaSlot}
       <div class="msg-content">
         ${meta}
         ${fav}
         <div class="msg-row">
-          <div class="msg-bubble"${bubbleStyle}>${quote}${escapeHtml(m.text)}</div>
+          <div class="msg-bubble">${quote}${escapeHtml(m.text)}</div>
           ${replyBtn}
         </div>
       </div>
@@ -1736,8 +1722,7 @@ if(window.fbChat)activateFirebaseChat();
 else window.addEventListener('fbchat-ready',activateFirebaseChat);
 
 /* ─── PROFILE ─── */
-const PRESET_COLORS=['#e8b84b','#f59e0b','#ef4444','#ec4899','#a855f7','#6366f1','#3b82f6','#06b6d4','#14b8a6','#22c55e','#84cc16','#f97316'];
-let profileDraft=null;    // tahrirlanayotgan nusxa {color, favTeams:[]}
+let profileDraft=null;    // tahrirlanayotgan nusxa {favTeams:[]}
 let profileDirty=false;   // foydalanuvchi qo'lda o'zgartirdimi (saqlanmagan)
 let TEAM_LIST=null;
 function teamList(){
@@ -1756,7 +1741,7 @@ function favTeamsArr(v){
 }
 function showProfile(){
   const saved=(currentUser&&usersMap[currentUser.uid])||{};
-  profileDraft={color:saved.color||'',favTeams:favTeamsArr(saved.favTeams).slice(0,3)};
+  profileDraft={favTeams:favTeamsArr(saved.favTeams).slice(0,3)};
   profileDirty=false;
   renderProfile();
 }
@@ -1774,15 +1759,13 @@ function renderProfile(){
   }
   if(!profileDraft){
     const saved=usersMap[currentUser.uid]||{};
-    profileDraft={color:saved.color||'',favTeams:favTeamsArr(saved.favTeams).slice(0,3)};
+    profileDraft={favTeams:favTeamsArr(saved.favTeams).slice(0,3)};
   }
   const d=profileDraft;
-  const pc=d.color||autoColor(currentUser.uid);
   const ini=escapeHtml((String(currentUser.name)[0]||'?').toUpperCase());
   const ava=currentUser.photo
     ? `<img class="profile-ava" src="${escapeHtml(currentUser.photo)}" referrerpolicy="no-referrer" alt="">`
-    : `<div class="profile-ava profile-ava-fb" style="background:${pc}">${ini}</div>`;
-  const swatches=PRESET_COLORS.map(c=>`<div class="swatch${d.color===c?' sel':''}" style="background:${c}" onclick="pickColor('${c}')" title="${c}"></div>`).join('');
+    : `<div class="profile-ava profile-ava-fb">${ini}</div>`;
   const byGroup={};
   teamList().forEach((t,idx)=>{(byGroup[t.group]=byGroup[t.group]||[]).push({...t,idx});});
   const groupsHtml=Object.keys(byGroup).map(gk=>{
@@ -1799,21 +1782,12 @@ function renderProfile(){
         <div><div class="profile-name">${escapeHtml(currentUser.name)}</div>
         <div class="profile-sub">Google profili</div></div>
       </div>
-      <div class="profile-section-title">Suhbat rangi</div>
-      <div class="swatches">${swatches}</div>
-      <div class="profile-preview">Ko'rinishi: <b style="color:${pc}">${escapeHtml(currentUser.name)}</b></div>
     </div>
     <div class="profile-card">
       <div class="profile-section-title">Sevimli jamoalar <span class="team-count">${d.favTeams.length}/3</span></div>
       ${groupsHtml}
     </div>
     <button class="profile-save" onclick="saveProfile()">Saqlash</button>`;
-}
-function pickColor(c){
-  if(!profileDraft)return;
-  profileDraft.color=(profileDraft.color===c)?'':c;  // qayta bossa — bekor qiladi
-  profileDirty=true;
-  renderProfile();
 }
 function toggleTeamIdx(idx){
   const t=teamList()[idx];
@@ -1830,7 +1804,6 @@ function toggleTeam(name){
 function saveProfile(){
   if(!currentUser||!profileDraft)return;
   window.fbChat.upsertUser(currentUser.uid,{
-    color: profileDraft.color||null,
     favTeams: profileDraft.favTeams.length?profileDraft.favTeams:null
   }).then(()=>{profileDirty=false;showToast("Profil saqlandi ✓");})
     .catch(err=>{console.error(err);alert("Saqlashda xato: "+(err.code||err.message));});
@@ -1839,17 +1812,16 @@ function openUserProfile(uid){
   if(!uid)return;
   const u=usersMap[uid]||{};
   const name=u.name||'Anonim';
-  const color=u.color||autoColor(uid);
   const ini=escapeHtml((String(name)[0]||'?').toUpperCase());
   const ava=u.photo
     ? `<img class="umodal-ava" src="${escapeHtml(u.photo)}" referrerpolicy="no-referrer" alt="">`
-    : `<div class="umodal-ava umodal-ava-fb" style="background:${color}">${ini}</div>`;
+    : `<div class="umodal-ava umodal-ava-fb">${ini}</div>`;
   const teams=favTeamsArr(u.favTeams);
   const teamsHtml=teams.length
     ? `<div class="umodal-teams">${teams.map(n=>{const t=teamInfoOf(n);return `<div class="umodal-team">${t.f||'⚽'} ${escapeHtml(n)}<span class="tg">${t.group?'GURUH '+t.group:''}</span></div>`;}).join('')}</div>`
     : `<div class="umodal-empty">Jamoa tanlamagan</div>`;
   document.getElementById('user-modal-body').innerHTML=`
-    <div class="umodal-top">${ava}<div class="umodal-name" style="color:${color}">${escapeHtml(name)}</div></div>
+    <div class="umodal-top">${ava}<div class="umodal-name">${escapeHtml(name)}</div></div>
     <div class="umodal-title">Sevimli jamoalar</div>
     ${teamsHtml}
     <button class="umodal-close" onclick="closeUserModal()">Yopish</button>`;
