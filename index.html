@@ -165,9 +165,14 @@ body {
   display: flex; flex-direction: column; gap: 12px;
 }
 .chat-empty { margin: auto; text-align: center; color: var(--text-dim); font-size: 13px; line-height: 1.6; }
-.msg { max-width: 78%; display: flex; flex-direction: column; gap: 3px; align-self: flex-start; }
-.msg.me { align-self: flex-end; align-items: flex-end; }
+.msg { max-width: 82%; display: flex; flex-direction: row; gap: 8px; align-items: flex-start; align-self: flex-start; }
+.msg.me { align-self: flex-end; flex-direction: row-reverse; }
 .msg.grouped { margin-top: -8px; }
+.msg-ava-slot { width: 32px; flex-shrink: 0; }
+.msg-ava { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; display: block; background: var(--bg4); }
+.msg-ava-fb { display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 14px; }
+.msg-content { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.msg.me .msg-content { align-items: flex-end; }
 .msg-meta { font-size: 11px; color: var(--text-dim); padding: 0 4px; }
 .msg-bubble {
   padding: 9px 13px; border-radius: 14px;
@@ -1425,6 +1430,17 @@ function fmtTime(ts){
   const d=new Date(ts);
   return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
 }
+function userColorOf(m){
+  const key=String((chatMode==='firebase'&&m.uid)?m.uid:(m.name||'?'));
+  let h=0;
+  for(let i=0;i<key.length;i++)h=(h*31+key.charCodeAt(i))%360;
+  return `hsl(${h},62%,58%)`;
+}
+function avatarHtml(m,color){
+  if(m.photo)return `<img class="msg-ava" src="${escapeHtml(m.photo)}" alt="" referrerpolicy="no-referrer">`;
+  const ini=escapeHtml((String(m.name||'?').trim().charAt(0)||'?').toUpperCase());
+  return `<div class="msg-ava msg-ava-fb" style="background:${color}">${ini}</div>`;
+}
 function renderChat(){
   const box=document.getElementById('chat-msgs');
   if(!box)return;
@@ -1443,16 +1459,25 @@ function renderChat(){
     const mine=(chatMode==='firebase')
       ? (currentUser&&m.uid===currentUser.uid)
       : (meName&&m.name===meName);
-    // bir xil yuboruvchi ketma-ket yozsa — ismni faqat birinchisida ko'rsatamiz
+    // bir xil yuboruvchi ketma-ket yozsa — ism/avatar faqat birinchisida
     const grouped=sameSender(msgs[i-1],m)&&!m.replyTo;
+    const color=userColorOf(m);
     const replyBtn=canAct?`<button class="msg-reply" onclick="replyToMessage(${i})" title="Javob berish" aria-label="Javob berish"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>`:'';
     const quote=m.replyTo?`<div class="msg-reply-quote"><b>${escapeHtml(m.replyTo.name)}</b><br>${escapeHtml(m.replyTo.text)}</div>`:'';
-    const meta=grouped?'':`<div class="msg-meta">${escapeHtml(m.name)} · ${fmtTime(m.ts)}</div>`;
+    // o'z xabarlarim: ism va avatar yashirin (o'ngda, oltin — shundoq ham bilinadi)
+    const avaSlot=mine?'':`<div class="msg-ava-slot">${grouped?'':avatarHtml(m,color)}</div>`;
+    const meta=mine
+      ? (grouped?'':`<div class="msg-meta">${fmtTime(m.ts)}</div>`)
+      : (grouped?'':`<div class="msg-meta"><span class="msg-name" style="color:${color}">${escapeHtml(m.name)}</span> · ${fmtTime(m.ts)}</div>`);
+    const bubbleStyle=mine?'':` style="border-left:3px solid ${color}"`;
     return `<div class="msg${mine?' me':''}${grouped?' grouped':''}">
-      ${meta}
-      <div class="msg-row">
-        <div class="msg-bubble">${quote}${escapeHtml(m.text)}</div>
-        ${replyBtn}
+      ${avaSlot}
+      <div class="msg-content">
+        ${meta}
+        <div class="msg-row">
+          <div class="msg-bubble"${bubbleStyle}>${quote}${escapeHtml(m.text)}</div>
+          ${replyBtn}
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -1513,7 +1538,7 @@ function sendMessage(e){
   if(!text)return;
   if(chatMode==='firebase'){
     if(!currentUser){alert("Avval tizimga kiring");return;}
-    window.fbChat.send(currentUser.name,text,currentUser.uid,replyContext)
+    window.fbChat.send(currentUser.name,text,currentUser.uid,currentUser.photo,replyContext)
       .catch(err=>{console.error(err);alert("Xabar yuborilmadi: "+(err.code||err.message));});
     replyContext=null;
     renderChatFoot();
@@ -1616,11 +1641,12 @@ try {
   };
 
   window.fbChat = {
-    send(name, text, uid, replyTo){
+    send(name, text, uid, photo, replyTo){
       const msg = {
         name: String(name).slice(0, 20),
         text: String(text).slice(0, 500),
         uid: uid || null,
+        photo: photo || null,
         ts: Date.now()
       };
       if (replyTo && replyTo.name && replyTo.text) {
@@ -1640,6 +1666,7 @@ try {
           arr.push({
             uid: v.uid || null,
             name: v.name || "Anonim",
+            photo: v.photo || null,
             text: v.text || "",
             ts: v.ts || Date.now(),
             replyTo: v.replyTo || null
