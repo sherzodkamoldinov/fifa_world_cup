@@ -1293,12 +1293,27 @@ function getStandings(gk){
   return teams.sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf);
 }
 
+/* ─── STANDINGS ROWS (qayta ishlatiladi: to'liq render va nuqtali yangilash) ─── */
+function standingsRows(gk){
+  const st=getStandings(gk);
+  return st.map((t,i)=>`<tr class="${i===0?'q1':i===1?'q2':i===2?'q3':''}">
+    <td><div class="team-cell"><span class="team-flag">${t.f}</span><span class="team-name-txt">${t.n}</span></div></td>
+    <td>${t.mp}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td>
+    <td>${t.gf}:${t.ga}</td><td style="color:${t.gf-t.ga>0?'var(--green)':t.gf-t.ga<0?'var(--red)':'var(--text-sec)'}">${t.gf-t.ga>0?'+':''}${t.gf-t.ga}</td>
+    <td class="pts-cell">${t.pts}</td>
+  </tr>`).join('');
+}
+// faqat bitta guruh jadvalini yangilaydi (inputlar va scroll buzilmaydi)
+function updateStandings(gk){
+  const el=document.getElementById('standings-'+gk);
+  if(el)el.innerHTML=standingsRows(gk);
+}
+
 /* ─── RENDER GROUPS ─── */
 function renderGroups(){
   const cont=document.getElementById('groups-container');
   cont.innerHTML='';
   for(const[gk,gv]of Object.entries(GROUPS)){
-    const st=getStandings(gk);
     const card=document.createElement('div');
     card.className='group-card';
     card.innerHTML=`
@@ -1312,12 +1327,7 @@ function renderGroups(){
       <table class="standings-table">
         <colgroup><col class="col-team"><col class="col-stat"><col class="col-stat"><col class="col-stat"><col class="col-stat"><col class="col-pts"><col class="col-stat"><col class="col-pts"></colgroup>
         <thead><tr><th>Jamoa</th><th>O'</th><th>G</th><th>D</th><th>U</th><th>FM</th><th>FM±</th><th>B</th></tr></thead>
-        <tbody>${st.map((t,i)=>`<tr class="${i===0?'q1':i===1?'q2':i===2?'q3':''}">
-          <td><div class="team-cell"><span class="team-flag">${t.f}</span><span class="team-name-txt">${t.n}</span></div></td>
-          <td>${t.mp}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td>
-          <td>${t.gf}:${t.ga}</td><td style="color:${t.gf-t.ga>0?'var(--green)':t.gf-t.ga<0?'var(--red)':'var(--text-sec)'}">${t.gf-t.ga>0?'+':''}${t.gf-t.ga}</td>
-          <td class="pts-cell">${t.pts}</td>
-        </tr>`).join('')}</tbody>
+        <tbody id="standings-${gk}">${standingsRows(gk)}</tbody>
       </table>
       <div class="matches-section">${GM[gk].map(m=>{
         const sk=`${gk}_${m.h}_${m.a}`;
@@ -1558,8 +1568,11 @@ function setScore(key,side,val){
   state.scores[key][side]=val===''?'':val;
   saveState();
   const activeId=document.querySelector('.panel.active').id;
-  if(activeId==='panel-groups')renderGroups();
-  else refreshAll();
+  if(activeId==='panel-groups'){
+    const gk=key.split('_')[0];           // 'K_O'zbekiston_Kolumbiya' -> 'K'
+    if(GROUPS[gk])updateStandings(gk);     // faqat o'sha guruh jadvali (scroll/fokus saqlanadi)
+    else renderGroups();
+  }else refreshAll();
 }
 
 /* ─── CHAT ───
