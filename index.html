@@ -177,12 +177,14 @@ body {
   background: linear-gradient(135deg, var(--accent), var(--accent-dim));
   color: #1a1300;
 }
-.chat-form {
-  display: flex; gap: 8px;
-  padding: 14px 16px;
+.chat-foot {
+  flex-shrink: 0;
   border-top: 1px solid var(--border);
   background: var(--bg2);
-  flex-shrink: 0;
+}
+.chat-form {
+  display: flex; gap: 8px; align-items: center;
+  padding: 14px 16px;
 }
 .chat-form input {
   background: var(--input-bg);
@@ -205,6 +207,34 @@ body {
   transition: filter var(--transition);
 }
 .chat-send:hover { filter: brightness(1.06); }
+/* auth */
+.chat-login-bar {
+  display: flex; align-items: center; justify-content: center;
+  gap: 14px; flex-wrap: wrap; padding: 18px 16px;
+}
+.chat-login-note { font-size: 13px; color: var(--text-sec); }
+.chat-login-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 18px; border-radius: var(--radius-md);
+  background: #fff; color: #1f1f1f;
+  border: 1px solid var(--border-md);
+  font-family: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: filter var(--transition);
+}
+.chat-login-btn:hover { filter: brightness(0.96); }
+.chat-login-btn svg { width: 18px; height: 18px; }
+.chat-ava {
+  width: 34px; height: 34px; border-radius: 50%;
+  flex-shrink: 0; object-fit: cover; background: var(--bg4);
+}
+.chat-logout {
+  width: 40px; flex-shrink: 0;
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  background: var(--bg3); color: var(--text-sec);
+  font-size: 15px; cursor: pointer;
+  transition: all var(--transition);
+}
+.chat-logout:hover { background: var(--bg4); color: var(--red); }
 @media (max-width: 700px) {
   .chat-wrap { height: calc(100vh - 180px); }
   .chat-name { width: 92px; }
@@ -853,11 +883,7 @@ body {
         <span class="chat-online" id="chat-online">Demo · localStorage</span>
       </div>
       <div class="chat-msgs" id="chat-msgs"></div>
-      <form class="chat-form" id="chat-form" onsubmit="sendMessage(event)" autocomplete="off">
-        <input class="chat-name" id="chat-name" placeholder="Ismingiz" maxlength="20">
-        <input class="chat-input" id="chat-input" placeholder="Xabar yozing..." maxlength="500">
-        <button class="chat-send" type="submit" title="Yuborish">➤</button>
-      </form>
+      <div class="chat-foot" id="chat-foot"></div>
     </div>
   </div>
 
@@ -1337,12 +1363,13 @@ function setScore(key,side,val){
 }
 
 /* ─── CHAT ───
-   chatMode 'firebase' bo'lsa Firestore'dan, aks holda localStorage'dan ishlaydi.
-   Firebase init va window.fbChat — quyidagi <script type="module"> ichida. */
+   chatMode 'firebase' -> Realtime DB + Google auth, aks holda localStorage demo.
+   Firebase init, window.fbChat va window.fbAuth — quyidagi <script type="module"> ichida. */
 const CHAT_KEY='wc2026_chat';
 const CHAT_NAME_KEY='wc2026_chat_name';
 let chatMessages=[];      // joriy ko'rinayotgan xabarlar (firebase rejimida)
 let chatMode='local';     // 'local' | 'firebase'
+let currentUser=null;     // {uid,name,photo} yoki null
 
 function loadLocal(){
   try{return JSON.parse(localStorage.getItem(CHAT_KEY))||[];}catch{return[];}
@@ -1361,13 +1388,15 @@ function renderChat(){
   const box=document.getElementById('chat-msgs');
   if(!box)return;
   const msgs=chatMode==='firebase'?chatMessages:loadLocal();
-  const me=(localStorage.getItem(CHAT_NAME_KEY)||'').trim();
+  const meName=(localStorage.getItem(CHAT_NAME_KEY)||'').trim();
   if(!msgs.length){
     box.innerHTML='<div class="chat-empty">Hali xabarlar yo\'q.<br>Birinchi bo\'lib yozing! 👋</div>';
     return;
   }
   box.innerHTML=msgs.map(m=>{
-    const mine=me&&m.name===me;
+    const mine=(chatMode==='firebase')
+      ? (currentUser&&m.uid===currentUser.uid)
+      : (meName&&m.name===meName);
     return `<div class="msg${mine?' me':''}">
       <div class="msg-meta">${escapeHtml(m.name)} · ${fmtTime(m.ts)}</div>
       <div class="msg-bubble">${escapeHtml(m.text)}</div>
@@ -1375,18 +1404,50 @@ function renderChat(){
   }).join('');
   box.scrollTop=box.scrollHeight;
 }
+const GOOGLE_ICON='<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.3 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-2.8-.4-4.1H24v7.8h12.4c-.3 2.1-1.6 5.2-4.6 7.3l7.1 5.5c4.3-3.9 6.8-9.7 6.8-16.5z"/><path fill="#FBBC05" d="M10.4 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6.1C1 16.1 0 19.9 0 24s1 7.9 2.6 11.3l7.8-6.6z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.1-5.5c-2 1.3-4.6 2.3-8.8 2.3-6.4 0-11.7-3.8-13.6-9.8l-7.8 6.6C6.5 42.6 14.6 48 24 48z"/></svg>';
+function renderChatFoot(){
+  const foot=document.getElementById('chat-foot');
+  if(!foot)return;
+  // localStorage demo rejimi: oddiy ism+xabar formasi
+  if(chatMode!=='firebase'){
+    foot.innerHTML=`<form class="chat-form" onsubmit="sendMessage(event)" autocomplete="off">
+      <input class="chat-name" id="chat-name" placeholder="Ismingiz" maxlength="20">
+      <input class="chat-input" id="chat-input" placeholder="Xabar yozing..." maxlength="500">
+      <button class="chat-send" type="submit" title="Yuborish">➤</button>
+    </form>`;
+    const n=localStorage.getItem(CHAT_NAME_KEY);
+    if(n){const el=document.getElementById('chat-name');if(el)el.value=n;}
+    return;
+  }
+  // firebase rejimi: kirmagan bo'lsa — login, kirgan bo'lsa — yozish formasi
+  if(!currentUser){
+    foot.innerHTML=`<div class="chat-login-bar">
+      <span class="chat-login-note">Yozish uchun tizimga kiring</span>
+      <button class="chat-login-btn" onclick="chatSignIn()">${GOOGLE_ICON}Google orqali kirish</button>
+    </div>`;
+    return;
+  }
+  foot.innerHTML=`<form class="chat-form" onsubmit="sendMessage(event)" autocomplete="off">
+    <img class="chat-ava" src="${escapeHtml(currentUser.photo)}" alt="" referrerpolicy="no-referrer">
+    <input class="chat-input" id="chat-input" placeholder="Xabar yozing, ${escapeHtml(currentUser.name)}..." maxlength="500">
+    <button class="chat-send" type="submit" title="Yuborish">➤</button>
+    <button class="chat-logout" type="button" onclick="chatSignOut()" title="Chiqish (${escapeHtml(currentUser.name)})">⏻</button>
+  </form>`;
+}
 function sendMessage(e){
   e.preventDefault();
-  const nameEl=document.getElementById('chat-name');
   const inputEl=document.getElementById('chat-input');
-  const name=(nameEl.value.trim())||'Anonim';
+  if(!inputEl)return;
   const text=inputEl.value.trim();
   if(!text)return;
-  localStorage.setItem(CHAT_NAME_KEY,name);
-  nameEl.value=name;
-  if(chatMode==='firebase'&&window.fbChat){
-    window.fbChat.send(name,text).catch(err=>{console.error(err);alert("Xabar yuborilmadi. Internetni tekshiring.");});
+  if(chatMode==='firebase'){
+    if(!currentUser){alert("Avval tizimga kiring");return;}
+    window.fbChat.send(currentUser.name,text,currentUser.uid)
+      .catch(err=>{console.error(err);alert("Xabar yuborilmadi: "+(err.code||err.message));});
   }else{
+    const nameEl=document.getElementById('chat-name');
+    const name=(nameEl&&nameEl.value.trim())||'Anonim';
+    localStorage.setItem(CHAT_NAME_KEY,name);
     const msgs=loadLocal();
     msgs.push({name,text,ts:Date.now()});
     saveLocal(msgs);
@@ -1394,12 +1455,23 @@ function sendMessage(e){
   }
   inputEl.value='';
 }
+function chatSignIn(){
+  if(window.fbAuth)window.fbAuth.signIn()
+    .catch(err=>{console.error(err);alert("Kirishda xato: "+(err.code||err.message));});
+}
+function chatSignOut(){
+  if(window.fbAuth)window.fbAuth.signOut();
+}
 function activateFirebaseChat(){
   if(!window.fbChat)return;
   chatMode='firebase';
   const tag=document.getElementById('chat-online');
   if(tag)tag.textContent='🟢 Onlayn · Firebase';
   window.fbChat.subscribe(msgs=>{chatMessages=msgs;renderChat();});
+  if(window.fbAuth){
+    window.fbAuth.onChange(u=>{currentUser=u;renderChatFoot();renderChat();});
+  }
+  renderChatFoot();
 }
 if(window.fbChat)activateFirebaseChat();
 else window.addEventListener('fbchat-ready',activateFirebaseChat);
@@ -1427,7 +1499,7 @@ function refreshAll(){
 /* ─── INIT ─── */
 renderGroups();
 refreshAll();
-(function(){const n=localStorage.getItem(CHAT_NAME_KEY);if(n){const el=document.getElementById('chat-name');if(el)el.value=n;}})();
+renderChatFoot();
 </script>
 
 <!-- ─── FIREBASE (Realtime Database real-time chat) ─── -->
@@ -1435,6 +1507,8 @@ refreshAll();
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import { getDatabase, ref, push, query, limitToLast, onValue }
   from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDjkhsv8U29HkMuGyfFHBztyq5WdelPUY4",
@@ -1450,13 +1524,30 @@ const firebaseConfig = {
 try {
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
+  const auth = getAuth(app);
   const msgsRef = ref(db, "messages");
 
+  window.fbAuth = {
+    signIn(){
+      const provider = new GoogleAuthProvider();
+      return signInWithPopup(auth, provider);
+    },
+    signOut(){ return signOut(auth); },
+    onChange(cb){
+      onAuthStateChanged(auth, u => cb(u ? {
+        uid: u.uid,
+        name: u.displayName || "Anonim",
+        photo: u.photoURL || ""
+      } : null));
+    }
+  };
+
   window.fbChat = {
-    send(name, text){
+    send(name, text, uid){
       return push(msgsRef, {
         name: String(name).slice(0, 20),
         text: String(text).slice(0, 500),
+        uid: uid || null,
         ts: Date.now()
       });
     },
