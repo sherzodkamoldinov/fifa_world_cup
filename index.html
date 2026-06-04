@@ -1330,9 +1330,9 @@ function renderGroups(){
             <span class="m-flag">${th.f}</span>
           </div>
           <div class="score-box">
-            <input class="score-input" type="number" min="0" max="99" value="${sc.h}" oninput="setScore('${sk}','h',this.value)" placeholder="–">
+            <input class="score-input" type="number" min="0" max="99" value="${sc.h}" data-key="${escapeHtml(sk)}" data-side="h" placeholder="–">
             <span class="score-sep">:</span>
-            <input class="score-input" type="number" min="0" max="99" value="${sc.a}" oninput="setScore('${sk}','a',this.value)" placeholder="–">
+            <input class="score-input" type="number" min="0" max="99" value="${sc.a}" data-key="${escapeHtml(sk)}" data-side="a" placeholder="–">
           </div>
           <div class="match-team-away">
             <span class="m-flag">${ta.f}</span>
@@ -1901,6 +1901,13 @@ function refreshAll(){
 }
 
 /* ─── INIT ─── */
+// guruh hisob inputlari: inline oninput emas, delegatsiya (apostrofli ismlar uchun xavfsiz)
+document.getElementById('groups-container').addEventListener('input',e=>{
+  const el=e.target;
+  if(el.classList&&el.classList.contains('score-input')&&el.dataset.key){
+    setScore(el.dataset.key,el.dataset.side,el.value);
+  }
+});
 renderGroups();
 refreshAll();
 renderChatFoot();
