@@ -59,6 +59,16 @@
 
 * { margin:0; padding:0; box-sizing:border-box; }
 
+.site-footer {
+  text-align: center; padding: 26px 16px;
+  font-size: 13px; color: var(--text-dim);
+  border-top: 1px solid var(--border);
+}
+.site-footer a {
+  color: var(--accent); text-decoration: none; font-weight: 600;
+}
+.site-footer a:hover { text-decoration: underline; }
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -1070,6 +1080,10 @@ body {
   </div>
 
 </div>
+
+<footer class="site-footer">
+  Created by <a href="https://taplink.cc/xurshiddinmaxkamov" target="_blank" rel="noopener noreferrer">Khurshiddin</a>
+</footer>
 
 <div class="umodal-overlay" id="user-modal" onclick="if(event.target===this)closeUserModal()">
   <div class="umodal" id="user-modal-body"></div>
