@@ -1415,7 +1415,8 @@ const CHAT_NAME_KEY='wc2026_chat_name';
 let chatMessages=[];      // joriy ko'rinayotgan xabarlar (firebase rejimida)
 let chatMode='local';     // 'local' | 'firebase'
 let currentUser=null;     // {uid,name,photo} yoki null
-let replyContext=null;    // javob berilayotgan xabar {name,text} yoki null
+let replyContext=null;    // javob berilayotgan xabar {uid,text,name} yoki null
+let usersMap={};          // {uid: {name, photo}} — /users dan
 
 function loadLocal(){
   try{return JSON.parse(localStorage.getItem(CHAT_KEY))||[];}catch{return[];}
@@ -1436,9 +1437,17 @@ function userColorOf(m){
   for(let i=0;i<key.length;i++)h=(h*31+key.charCodeAt(i))%360;
   return `hsl(${h},62%,58%)`;
 }
-function avatarHtml(m,color){
-  if(m.photo)return `<img class="msg-ava" src="${escapeHtml(m.photo)}" alt="" referrerpolicy="no-referrer">`;
-  const ini=escapeHtml((String(m.name||'?').trim().charAt(0)||'?').toUpperCase());
+// xabar egasini id orqali /users dan olamiz, bo'lmasa — eski xabardagi qiymat (fallback)
+function authorOf(m){
+  const u=(m.uid&&usersMap[m.uid])||{};
+  return { name: u.name || m.name || 'Anonim', photo: u.photo || m.photo || '' };
+}
+function nameByUid(uid,fallback){
+  return (uid&&usersMap[uid]&&usersMap[uid].name) || fallback || 'Anonim';
+}
+function avatarHtml(photo,name,color){
+  if(photo)return `<img class="msg-ava" src="${escapeHtml(photo)}" alt="" referrerpolicy="no-referrer">`;
+  const ini=escapeHtml((String(name||'?').trim().charAt(0)||'?').toUpperCase());
   return `<div class="msg-ava msg-ava-fb" style="background:${color}">${ini}</div>`;
 }
 function renderChat(){
@@ -1462,13 +1471,15 @@ function renderChat(){
     // bir xil yuboruvchi ketma-ket yozsa — ism/avatar faqat birinchisida
     const grouped=sameSender(msgs[i-1],m)&&!m.replyTo;
     const color=userColorOf(m);
+    const a=authorOf(m);
     const replyBtn=canAct?`<button class="msg-reply" onclick="replyToMessage(${i})" title="Javob berish" aria-label="Javob berish"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>`:'';
-    const quote=m.replyTo?`<div class="msg-reply-quote"><b>${escapeHtml(m.replyTo.name)}</b><br>${escapeHtml(m.replyTo.text)}</div>`:'';
+    const replyName=m.replyTo?(m.replyTo.name||nameByUid(m.replyTo.uid)):'';
+    const quote=m.replyTo?`<div class="msg-reply-quote"><b>${escapeHtml(replyName)}</b><br>${escapeHtml(m.replyTo.text)}</div>`:'';
     // o'z xabarlarim: ism va avatar yashirin (o'ngda, oltin — shundoq ham bilinadi)
-    const avaSlot=mine?'':`<div class="msg-ava-slot">${grouped?'':avatarHtml(m,color)}</div>`;
+    const avaSlot=mine?'':`<div class="msg-ava-slot">${grouped?'':avatarHtml(a.photo,a.name,color)}</div>`;
     const meta=mine
       ? (grouped?'':`<div class="msg-meta">${fmtTime(m.ts)}</div>`)
-      : (grouped?'':`<div class="msg-meta"><span class="msg-name" style="color:${color}">${escapeHtml(m.name)}</span> · ${fmtTime(m.ts)}</div>`);
+      : (grouped?'':`<div class="msg-meta"><span class="msg-name" style="color:${color}">${escapeHtml(a.name)}</span> · ${fmtTime(m.ts)}</div>`);
     const bubbleStyle=mine?'':` style="border-left:3px solid ${color}"`;
     return `<div class="msg${mine?' me':''}${grouped?' grouped':''}">
       ${avaSlot}
@@ -1487,7 +1498,7 @@ function replyToMessage(i){
   const m=chatMessages[i];
   if(!m)return;
   if(!currentUser){alert("Avval tizimga kiring");return;}
-  replyContext={name:m.name,text:String(m.text).slice(0,120)};
+  replyContext={uid:m.uid,name:authorOf(m).name,text:String(m.text).slice(0,120)};
   renderChatFoot();
   const el=document.getElementById('chat-input');
   if(el)el.focus();
@@ -1538,7 +1549,7 @@ function sendMessage(e){
   if(!text)return;
   if(chatMode==='firebase'){
     if(!currentUser){alert("Avval tizimga kiring");return;}
-    window.fbChat.send(currentUser.name,text,currentUser.uid,currentUser.photo,replyContext)
+    window.fbChat.send(currentUser.uid,text,replyContext)
       .catch(err=>{console.error(err);alert("Xabar yuborilmadi: "+(err.code||err.message));});
     replyContext=null;
     renderChatFoot();
@@ -1566,8 +1577,15 @@ function activateFirebaseChat(){
   const tag=document.getElementById('chat-online');
   if(tag)tag.textContent='🟢 Onlayn · Firebase';
   window.fbChat.subscribe(msgs=>{chatMessages=msgs;renderChat();});
+  if(window.fbChat.onUsers){
+    window.fbChat.onUsers(map=>{usersMap=map||{};renderChat();});
+  }
   if(window.fbAuth){
-    window.fbAuth.onChange(u=>{currentUser=u;renderChatFoot();renderChat();});
+    window.fbAuth.onChange(u=>{
+      currentUser=u;
+      if(u&&window.fbChat.upsertUser)window.fbChat.upsertUser(u.uid,{name:u.name,photo:u.photo});
+      renderChatFoot();renderChat();
+    });
   }
   renderChatFoot();
 }
@@ -1603,7 +1621,7 @@ renderChatFoot();
 <!-- ─── FIREBASE (Realtime Database real-time chat) ─── -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-import { getDatabase, ref, push, query, limitToLast, onValue }
+import { getDatabase, ref, push, set, query, limitToLast, onValue }
   from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
@@ -1624,6 +1642,7 @@ try {
   const db = getDatabase(app);
   const auth = getAuth(app);
   const msgsRef = ref(db, "messages");
+  const usersRef = ref(db, "users");
 
   window.fbAuth = {
     signIn(){
@@ -1641,17 +1660,29 @@ try {
   };
 
   window.fbChat = {
-    send(name, text, uid, photo, replyTo){
+    // foydalanuvchi profilini /users/{uid} ga yozish (kirgan paytda)
+    upsertUser(uid, profile){
+      if(!uid) return Promise.resolve();
+      return set(ref(db, "users/" + uid), {
+        name: String(profile.name || "Anonim").slice(0, 40),
+        photo: profile.photo || null,
+        ts: Date.now()
+      });
+    },
+    // barcha profillarni kuzatish: {uid: {name, photo}}
+    onUsers(cb){
+      onValue(usersRef, snap => cb(snap.val() || {}), err => console.error("Users xato:", err));
+    },
+    // xabar faqat id bilan: {uid, text, ts, replyTo?:{uid,text}}
+    send(uid, text, replyTo){
       const msg = {
-        name: String(name).slice(0, 20),
-        text: String(text).slice(0, 500),
         uid: uid || null,
-        photo: photo || null,
+        text: String(text).slice(0, 500),
         ts: Date.now()
       };
-      if (replyTo && replyTo.name && replyTo.text) {
+      if (replyTo && replyTo.text) {
         msg.replyTo = {
-          name: String(replyTo.name).slice(0, 20),
+          uid: replyTo.uid || null,
           text: String(replyTo.text).slice(0, 120)
         };
       }
@@ -1665,8 +1696,8 @@ try {
           const v = child.val();
           arr.push({
             uid: v.uid || null,
-            name: v.name || "Anonim",
-            photo: v.photo || null,
+            name: v.name || null,   // eski xabarlar uchun (backward compat)
+            photo: v.photo || null, // eski xabarlar uchun
             text: v.text || "",
             ts: v.ts || Date.now(),
             replyTo: v.replyTo || null
