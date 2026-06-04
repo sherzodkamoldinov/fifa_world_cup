@@ -361,6 +361,15 @@ body {
   box-shadow: 0 8px 28px rgba(0,0,0,0.35);
 }
 .profile-save:hover { filter: brightness(1.05); }
+.profile-logout {
+  display: block; width: 100%;
+  margin-top: 10px; padding: 12px;
+  border: 1px solid var(--border-md); border-radius: var(--radius-md);
+  background: transparent; color: var(--red);
+  font-family: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: background var(--transition), border-color var(--transition);
+}
+.profile-logout:hover { background: rgba(248,113,113,0.12); border-color: var(--red); }
 .profile-login { text-align: center; padding: 40px 20px; color: var(--text-sec); }
 .profile-login .chat-login-btn { margin: 16px auto 0; }
 
@@ -1681,7 +1690,6 @@ function renderChatFoot(){
     <img class="chat-ava" src="${escapeHtml(currentUser.photo)}" alt="" referrerpolicy="no-referrer">
     <input class="chat-input" id="chat-input" placeholder="Xabar yozing, ${escapeHtml(currentUser.name)}..." maxlength="500">
     <button class="chat-send" type="submit" title="Yuborish">➤</button>
-    <button class="chat-logout" type="button" onclick="chatSignOut()" title="Chiqish (${escapeHtml(currentUser.name)})">⏻</button>
   </form>`;
 }
 function sendMessage(e){
@@ -1807,7 +1815,8 @@ function renderProfile(){
       <div class="profile-section-title">Sevimli jamoalar <span class="team-count">${d.favTeams.length}/3</span></div>
       ${groupsHtml}
     </div>
-    <button class="profile-save" onclick="saveProfile()">Saqlash</button>`;
+    <button class="profile-save" onclick="saveProfile()">Saqlash</button>
+    <button class="profile-logout" onclick="chatSignOut()">Chiqish (Logout)</button>`;
 }
 function toggleTeamIdx(idx){
   const t=teamList()[idx];
