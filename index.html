@@ -173,6 +173,7 @@ body {
 .msg-ava-fb { display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 14px; }
 .msg-content { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .msg.me .msg-content { align-items: flex-end; }
+.msg-fav { font-size: 13px; line-height: 1; padding: 0 4px; margin-top: -2px; letter-spacing: 1px; }
 .msg-meta { font-size: 11px; color: var(--text-dim); padding: 0 4px; }
 .msg-bubble {
   padding: 9px 13px; border-radius: 14px;
@@ -1548,6 +1549,13 @@ function authorOf(m){
 function nameByUid(uid,fallback){
   return (uid&&usersMap[uid]&&usersMap[uid].name) || fallback || 'Anonim';
 }
+function favLineFor(uid){
+  const u=uid&&usersMap[uid];
+  const teams=u?favTeamsArr(u.favTeams):[];
+  if(!teams.length)return '';
+  const flags=teams.map(n=>teamInfoOf(n).f||'⚽').join(' ');
+  return `<div class="msg-fav" title="${escapeHtml(teams.join(', '))}">${flags}</div>`;
+}
 function avatarHtml(photo,name,color){
   if(photo)return `<img class="msg-ava" src="${escapeHtml(photo)}" alt="" referrerpolicy="no-referrer">`;
   const ini=escapeHtml((String(name||'?').trim().charAt(0)||'?').toUpperCase());
@@ -1585,11 +1593,13 @@ function renderChat(){
     const meta=mine
       ? (grouped?'':`<div class="msg-meta">${fmtTime(m.ts)}</div>`)
       : (grouped?'':`<div class="msg-meta"><span class="msg-name" style="color:${color}"${uclick}>${escapeHtml(a.name)}</span> · ${fmtTime(m.ts)}</div>`);
+    const fav=(!mine&&!grouped)?favLineFor(m.uid):'';
     const bubbleStyle=mine?'':` style="border-left:3px solid ${color}"`;
     return `<div class="msg${mine?' me':''}${grouped?' grouped':''}">
       ${avaSlot}
       <div class="msg-content">
         ${meta}
+        ${fav}
         <div class="msg-row">
           <div class="msg-bubble"${bubbleStyle}>${quote}${escapeHtml(m.text)}</div>
           ${replyBtn}
