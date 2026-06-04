@@ -167,6 +167,7 @@ body {
 .chat-empty { margin: auto; text-align: center; color: var(--text-dim); font-size: 13px; line-height: 1.6; }
 .msg { max-width: 78%; display: flex; flex-direction: column; gap: 3px; align-self: flex-start; }
 .msg.me { align-self: flex-end; align-items: flex-end; }
+.msg.grouped { margin-top: -8px; }
 .msg-meta { font-size: 11px; color: var(--text-dim); padding: 0 4px; }
 .msg-bubble {
   padding: 9px 13px; border-radius: 14px;
@@ -1434,14 +1435,21 @@ function renderChat(){
     return;
   }
   const canAct=chatMode==='firebase'&&currentUser;
+  const sameSender=(a,b)=>{
+    if(!a||!b)return false;
+    return (chatMode==='firebase')?(a.uid&&b.uid&&a.uid===b.uid):(a.name===b.name);
+  };
   box.innerHTML=msgs.map((m,i)=>{
     const mine=(chatMode==='firebase')
       ? (currentUser&&m.uid===currentUser.uid)
       : (meName&&m.name===meName);
+    // bir xil yuboruvchi ketma-ket yozsa — ismni faqat birinchisida ko'rsatamiz
+    const grouped=sameSender(msgs[i-1],m)&&!m.replyTo;
     const replyBtn=canAct?`<button class="msg-reply" onclick="replyToMessage(${i})" title="Javob berish" aria-label="Javob berish"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>`:'';
     const quote=m.replyTo?`<div class="msg-reply-quote"><b>${escapeHtml(m.replyTo.name)}</b><br>${escapeHtml(m.replyTo.text)}</div>`:'';
-    return `<div class="msg${mine?' me':''}">
-      <div class="msg-meta">${escapeHtml(m.name)} · ${fmtTime(m.ts)}</div>
+    const meta=grouped?'':`<div class="msg-meta">${escapeHtml(m.name)} · ${fmtTime(m.ts)}</div>`;
+    return `<div class="msg${mine?' me':''}${grouped?' grouped':''}">
+      ${meta}
       <div class="msg-row">
         <div class="msg-bubble">${quote}${escapeHtml(m.text)}</div>
         ${replyBtn}
