@@ -140,6 +140,20 @@ body {
 }
 .theme-btn:hover { background: var(--bg4); border-color: var(--border-md); }
 
+#toast {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--bg4); color: var(--text);
+  border: 1px solid var(--border-md);
+  padding: 12px 22px; border-radius: 12px;
+  font-size: 14px; font-weight: 600;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+  opacity: 0; pointer-events: none;
+  transition: opacity .25s ease, transform .25s ease;
+  z-index: 700;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
 /* ─── CHAT ─────────────────────────────────────────── */
 .chat-wrap {
   max-width: 760px; margin: 0 auto;
@@ -1522,6 +1536,14 @@ function saveLocal(msgs){
 }
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function showToast(msg){
+  let t=document.getElementById('toast');
+  if(!t){t=document.createElement('div');t.id='toast';document.body.appendChild(t);}
+  t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t=setTimeout(()=>t.classList.remove('show'),2600);
 }
 function fmtTime(ts){
   const d=new Date(ts);
