@@ -140,6 +140,76 @@ body {
 }
 .theme-btn:hover { background: var(--bg4); border-color: var(--border-md); }
 
+/* ─── CHAT ─────────────────────────────────────────── */
+.chat-wrap {
+  max-width: 760px; margin: 0 auto;
+  display: flex; flex-direction: column;
+  height: calc(100vh - 230px); min-height: 440px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.chat-head {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+.chat-head h3 { font-family: 'Syne', sans-serif; font-size: 16px; }
+.chat-head-icon { font-size: 18px; }
+.chat-online { margin-left: auto; font-size: 11px; color: var(--text-sec); }
+.chat-msgs {
+  flex: 1; overflow-y: auto;
+  padding: 18px 20px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.chat-empty { margin: auto; text-align: center; color: var(--text-dim); font-size: 13px; line-height: 1.6; }
+.msg { max-width: 78%; display: flex; flex-direction: column; gap: 3px; align-self: flex-start; }
+.msg.me { align-self: flex-end; align-items: flex-end; }
+.msg-meta { font-size: 11px; color: var(--text-dim); padding: 0 4px; }
+.msg-bubble {
+  padding: 9px 13px; border-radius: 14px;
+  background: var(--bg3); font-size: 14px; line-height: 1.4;
+  word-break: break-word; white-space: pre-wrap;
+}
+.msg.me .msg-bubble {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+  color: #1a1300;
+}
+.chat-form {
+  display: flex; gap: 8px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg2);
+  flex-shrink: 0;
+}
+.chat-form input {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  color: var(--text);
+  font-family: inherit; font-size: 14px;
+  outline: none;
+  transition: border-color var(--transition);
+}
+.chat-form input:focus { border-color: var(--accent); }
+.chat-name { width: 120px; flex-shrink: 0; }
+.chat-input { flex: 1; min-width: 0; }
+.chat-send {
+  width: 44px; flex-shrink: 0;
+  border: none; border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+  color: #1a1300; font-size: 18px; cursor: pointer;
+  transition: filter var(--transition);
+}
+.chat-send:hover { filter: brightness(1.06); }
+@media (max-width: 700px) {
+  .chat-wrap { height: calc(100vh - 180px); }
+  .chat-name { width: 92px; }
+}
+
 /* ─── NAV TABS ────────────────────────────────────── */
 .nav-wrap {
   background: var(--bg2);
@@ -713,6 +783,12 @@ body {
     </span>
     <span class="nav-tab-label">Final</span>
   </div>
+  <div class="nav-tab" onclick="showPanel('chat',this)">
+    <span class="nav-tab-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    </span>
+    <span class="nav-tab-label">Suhbat</span>
+  </div>
 </nav>
 
 <!-- MAIN -->
@@ -767,6 +843,22 @@ body {
       <div class="bracket-stage-sub">20 Iyul 2026 · MetLife Stad., Nyu-York/NJ</div>
     </div>
     <div class="bracket-grid bracket-grid-1" id="final-container"></div>
+  </div>
+
+  <div class="panel" id="panel-chat">
+    <div class="chat-wrap">
+      <div class="chat-head">
+        <span class="chat-head-icon">💬</span>
+        <h3>Muhokama</h3>
+        <span class="chat-online" id="chat-online">Demo · localStorage</span>
+      </div>
+      <div class="chat-msgs" id="chat-msgs"></div>
+      <form class="chat-form" id="chat-form" onsubmit="sendMessage(event)" autocomplete="off">
+        <input class="chat-name" id="chat-name" placeholder="Ismingiz" maxlength="20">
+        <input class="chat-input" id="chat-input" placeholder="Xabar yozing..." maxlength="500">
+        <button class="chat-send" type="submit" title="Yuborish">➤</button>
+      </form>
+    </div>
   </div>
 
 </div>
@@ -1244,6 +1336,74 @@ function setScore(key,side,val){
   else refreshAll();
 }
 
+/* ─── CHAT ───
+   chatMode 'firebase' bo'lsa Firestore'dan, aks holda localStorage'dan ishlaydi.
+   Firebase init va window.fbChat — quyidagi <script type="module"> ichida. */
+const CHAT_KEY='wc2026_chat';
+const CHAT_NAME_KEY='wc2026_chat_name';
+let chatMessages=[];      // joriy ko'rinayotgan xabarlar (firebase rejimida)
+let chatMode='local';     // 'local' | 'firebase'
+
+function loadLocal(){
+  try{return JSON.parse(localStorage.getItem(CHAT_KEY))||[];}catch{return[];}
+}
+function saveLocal(msgs){
+  localStorage.setItem(CHAT_KEY,JSON.stringify(msgs.slice(-200)));
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtTime(ts){
+  const d=new Date(ts);
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function renderChat(){
+  const box=document.getElementById('chat-msgs');
+  if(!box)return;
+  const msgs=chatMode==='firebase'?chatMessages:loadLocal();
+  const me=(localStorage.getItem(CHAT_NAME_KEY)||'').trim();
+  if(!msgs.length){
+    box.innerHTML='<div class="chat-empty">Hali xabarlar yo\'q.<br>Birinchi bo\'lib yozing! 👋</div>';
+    return;
+  }
+  box.innerHTML=msgs.map(m=>{
+    const mine=me&&m.name===me;
+    return `<div class="msg${mine?' me':''}">
+      <div class="msg-meta">${escapeHtml(m.name)} · ${fmtTime(m.ts)}</div>
+      <div class="msg-bubble">${escapeHtml(m.text)}</div>
+    </div>`;
+  }).join('');
+  box.scrollTop=box.scrollHeight;
+}
+function sendMessage(e){
+  e.preventDefault();
+  const nameEl=document.getElementById('chat-name');
+  const inputEl=document.getElementById('chat-input');
+  const name=(nameEl.value.trim())||'Anonim';
+  const text=inputEl.value.trim();
+  if(!text)return;
+  localStorage.setItem(CHAT_NAME_KEY,name);
+  nameEl.value=name;
+  if(chatMode==='firebase'&&window.fbChat){
+    window.fbChat.send(name,text).catch(err=>{console.error(err);alert("Xabar yuborilmadi. Internetni tekshiring.");});
+  }else{
+    const msgs=loadLocal();
+    msgs.push({name,text,ts:Date.now()});
+    saveLocal(msgs);
+    renderChat();
+  }
+  inputEl.value='';
+}
+function activateFirebaseChat(){
+  if(!window.fbChat)return;
+  chatMode='firebase';
+  const tag=document.getElementById('chat-online');
+  if(tag)tag.textContent='🟢 Onlayn · Firebase';
+  window.fbChat.subscribe(msgs=>{chatMessages=msgs;renderChat();});
+}
+if(window.fbChat)activateFirebaseChat();
+else window.addEventListener('fbchat-ready',activateFirebaseChat);
+
 /* ─── TABS ─── */
 function showPanel(name,el){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
@@ -1251,6 +1411,7 @@ function showPanel(name,el){
   document.getElementById('panel-'+name).classList.add('active');
   el.classList.add('active');
   if(name==='groups')renderGroups();
+  else if(name==='chat')renderChat();
   else refreshAll();
 }
 
@@ -1266,6 +1427,59 @@ function refreshAll(){
 /* ─── INIT ─── */
 renderGroups();
 refreshAll();
+(function(){const n=localStorage.getItem(CHAT_NAME_KEY);if(n){const el=document.getElementById('chat-name');if(el)el.value=n;}})();
+</script>
+
+<!-- ─── FIREBASE (Realtime Database real-time chat) ─── -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import { getDatabase, ref, push, query, limitToLast, onValue }
+  from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDjkhsv8U29HkMuGyfFHBztyq5WdelPUY4",
+  authDomain: "fifaworldcup-e491a.firebaseapp.com",
+  databaseURL: "https://fifaworldcup-e491a-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "fifaworldcup-e491a",
+  storageBucket: "fifaworldcup-e491a.firebasestorage.app",
+  messagingSenderId: "892452617326",
+  appId: "1:892452617326:web:f0bae1f74ff9eab3437a7f",
+  measurementId: "G-ZGJ1BMTJQT"
+};
+
+try {
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const msgsRef = ref(db, "messages");
+
+  window.fbChat = {
+    send(name, text){
+      return push(msgsRef, {
+        name: String(name).slice(0, 20),
+        text: String(text).slice(0, 500),
+        ts: Date.now()
+      });
+    },
+    subscribe(cb){
+      const q = query(msgsRef, limitToLast(200));
+      onValue(q, snap => {
+        const arr = [];
+        snap.forEach(child => {
+          const v = child.val();
+          arr.push({
+            name: v.name || "Anonim",
+            text: v.text || "",
+            ts: v.ts || Date.now()
+          });
+        });
+        cb(arr);
+      }, err => console.error("Realtime DB xato:", err));
+    }
+  };
+  window.dispatchEvent(new Event("fbchat-ready"));
+} catch (e) {
+  console.error("Firebase init xato — localStorage rejimida ishlayapti:", e);
+}
 </script>
 </body>
 </html>
