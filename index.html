@@ -265,6 +265,39 @@ body {
 }
 .msg:hover .msg-pin { opacity: .55; }
 .msg-pin:hover { opacity: 1; }
+.msg-reply {
+  opacity: 0; border: none; background: transparent;
+  cursor: pointer; font-size: 13px; padding: 2px; flex-shrink: 0;
+  transition: opacity var(--transition);
+}
+.msg:hover .msg-reply { opacity: .55; }
+.msg-reply:hover { opacity: 1; }
+.msg-reply-quote {
+  border-left: 3px solid var(--accent);
+  padding: 2px 8px; margin-bottom: 5px;
+  font-size: 12px; line-height: 1.35;
+  opacity: .85; border-radius: 3px;
+  background: rgba(255,255,255,0.05);
+  max-height: 48px; overflow: hidden;
+}
+.msg.me .msg-reply-quote { border-left-color: rgba(0,0,0,0.35); background: rgba(0,0,0,0.08); }
+.msg-reply-quote b { font-weight: 600; }
+.reply-preview {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px 0;
+  font-size: 12px; color: var(--text-sec);
+}
+.reply-preview-body {
+  flex: 1; min-width: 0;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  border-left: 3px solid var(--accent); padding-left: 8px;
+}
+.reply-preview-body b { color: var(--text); }
+.reply-x {
+  flex-shrink: 0; border: none; background: transparent;
+  color: var(--text-sec); cursor: pointer; font-size: 14px; line-height: 1;
+}
+.reply-x:hover { color: var(--red); }
 @media (max-width: 700px) {
   .chat-wrap { height: calc(100vh - 180px); }
   .chat-name { width: 92px; }
@@ -1402,6 +1435,7 @@ let chatMessages=[];      // joriy ko'rinayotgan xabarlar (firebase rejimida)
 let chatMode='local';     // 'local' | 'firebase'
 let currentUser=null;     // {uid,name,photo} yoki null
 let pinnedMsg=null;       // mahkamlangan xabar yoki null
+let replyContext=null;    // javob berilayotgan xabar {name,text} yoki null
 
 function loadLocal(){
   try{return JSON.parse(localStorage.getItem(CHAT_KEY))||[];}catch{return[];}
@@ -1425,21 +1459,36 @@ function renderChat(){
     box.innerHTML='<div class="chat-empty">Hali xabarlar yo\'q.<br>Birinchi bo\'lib yozing! 👋</div>';
     return;
   }
-  const canPin=chatMode==='firebase'&&currentUser;
+  const canAct=chatMode==='firebase'&&currentUser;
   box.innerHTML=msgs.map((m,i)=>{
     const mine=(chatMode==='firebase')
       ? (currentUser&&m.uid===currentUser.uid)
       : (meName&&m.name===meName);
-    const pinBtn=canPin?`<button class="msg-pin" onclick="pinMessage(${i})" title="Mahkamlash">📌</button>`:'';
+    const pinBtn=canAct?`<button class="msg-pin" onclick="pinMessage(${i})" title="Mahkamlash">📌</button>`:'';
+    const replyBtn=canAct?`<button class="msg-reply" onclick="replyToMessage(${i})" title="Javob berish">↩</button>`:'';
+    const quote=m.replyTo?`<div class="msg-reply-quote"><b>${escapeHtml(m.replyTo.name)}</b><br>${escapeHtml(m.replyTo.text)}</div>`:'';
     return `<div class="msg${mine?' me':''}">
       <div class="msg-meta">${escapeHtml(m.name)} · ${fmtTime(m.ts)}</div>
       <div class="msg-row">
-        <div class="msg-bubble">${escapeHtml(m.text)}</div>
-        ${pinBtn}
+        <div class="msg-bubble">${quote}${escapeHtml(m.text)}</div>
+        ${replyBtn}${pinBtn}
       </div>
     </div>`;
   }).join('');
   box.scrollTop=box.scrollHeight;
+}
+function replyToMessage(i){
+  const m=chatMessages[i];
+  if(!m)return;
+  if(!currentUser){alert("Avval tizimga kiring");return;}
+  replyContext={name:m.name,text:String(m.text).slice(0,120)};
+  renderChatFoot();
+  const el=document.getElementById('chat-input');
+  if(el)el.focus();
+}
+function cancelReply(){
+  replyContext=null;
+  renderChatFoot();
 }
 function renderPinned(){
   const bar=document.getElementById('chat-pinned');
@@ -1487,7 +1536,11 @@ function renderChatFoot(){
     </div>`;
     return;
   }
-  foot.innerHTML=`<form class="chat-form" onsubmit="sendMessage(event)" autocomplete="off">
+  const replyBar=replyContext?`<div class="reply-preview">
+      <span class="reply-preview-body"><b>↩ ${escapeHtml(replyContext.name)}</b>: ${escapeHtml(replyContext.text)}</span>
+      <button class="reply-x" type="button" onclick="cancelReply()" title="Bekor qilish">✕</button>
+    </div>`:'';
+  foot.innerHTML=replyBar+`<form class="chat-form" onsubmit="sendMessage(event)" autocomplete="off">
     <img class="chat-ava" src="${escapeHtml(currentUser.photo)}" alt="" referrerpolicy="no-referrer">
     <input class="chat-input" id="chat-input" placeholder="Xabar yozing, ${escapeHtml(currentUser.name)}..." maxlength="500">
     <button class="chat-send" type="submit" title="Yuborish">➤</button>
@@ -1502,8 +1555,10 @@ function sendMessage(e){
   if(!text)return;
   if(chatMode==='firebase'){
     if(!currentUser){alert("Avval tizimga kiring");return;}
-    window.fbChat.send(currentUser.name,text,currentUser.uid)
+    window.fbChat.send(currentUser.name,text,currentUser.uid,replyContext)
       .catch(err=>{console.error(err);alert("Xabar yuborilmadi: "+(err.code||err.message));});
+    replyContext=null;
+    renderChatFoot();
   }else{
     const nameEl=document.getElementById('chat-name');
     const name=(nameEl&&nameEl.value.trim())||'Anonim';
@@ -1607,13 +1662,20 @@ try {
   };
 
   window.fbChat = {
-    send(name, text, uid){
-      return push(msgsRef, {
+    send(name, text, uid, replyTo){
+      const msg = {
         name: String(name).slice(0, 20),
         text: String(text).slice(0, 500),
         uid: uid || null,
         ts: Date.now()
-      });
+      };
+      if (replyTo && replyTo.name && replyTo.text) {
+        msg.replyTo = {
+          name: String(replyTo.name).slice(0, 20),
+          text: String(replyTo.text).slice(0, 120)
+        };
+      }
+      return push(msgsRef, msg);
     },
     subscribe(cb){
       const q = query(msgsRef, limitToLast(200));
@@ -1625,7 +1687,8 @@ try {
             uid: v.uid || null,
             name: v.name || "Anonim",
             text: v.text || "",
-            ts: v.ts || Date.now()
+            ts: v.ts || Date.now(),
+            replyTo: v.replyTo || null
           });
         });
         cb(arr);
