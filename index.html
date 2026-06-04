@@ -238,12 +238,16 @@ body {
 .msg-row { display: flex; align-items: center; gap: 6px; }
 .msg.me .msg-row { flex-direction: row-reverse; }
 .msg-reply {
-  opacity: 0; border: none; background: transparent;
-  cursor: pointer; font-size: 13px; padding: 2px; flex-shrink: 0;
-  transition: opacity var(--transition);
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; flex-shrink: 0;
+  border: 1px solid var(--border); border-radius: 50%;
+  background: var(--bg3); color: var(--text-sec);
+  cursor: pointer; opacity: .4;
+  transition: all var(--transition);
 }
-.msg:hover .msg-reply { opacity: .55; }
-.msg-reply:hover { opacity: 1; }
+.msg-reply svg { width: 15px; height: 15px; }
+.msg:hover .msg-reply { opacity: 1; }
+.msg-reply:hover { background: var(--bg4); color: var(--accent); border-color: var(--border-md); }
 .msg-reply-quote {
   border-left: 3px solid var(--accent);
   padding: 2px 8px; margin-bottom: 5px;
@@ -1434,7 +1438,7 @@ function renderChat(){
     const mine=(chatMode==='firebase')
       ? (currentUser&&m.uid===currentUser.uid)
       : (meName&&m.name===meName);
-    const replyBtn=canAct?`<button class="msg-reply" onclick="replyToMessage(${i})" title="Javob berish">↩</button>`:'';
+    const replyBtn=canAct?`<button class="msg-reply" onclick="replyToMessage(${i})" title="Javob berish" aria-label="Javob berish"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg></button>`:'';
     const quote=m.replyTo?`<div class="msg-reply-quote"><b>${escapeHtml(m.replyTo.name)}</b><br>${escapeHtml(m.replyTo.text)}</div>`:'';
     return `<div class="msg${mine?' me':''}">
       <div class="msg-meta">${escapeHtml(m.name)} · ${fmtTime(m.ts)}</div>
