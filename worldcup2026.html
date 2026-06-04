@@ -140,24 +140,6 @@ body {
 }
 .theme-btn:hover { background: var(--bg4); border-color: var(--border-md); }
 
-.toolbar { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.progress-chip { cursor: default; }
-.progress-chip b { color: var(--accent); }
-
-#toast {
-  position: fixed; bottom: 24px; left: 50%;
-  transform: translateX(-50%) translateY(20px);
-  background: var(--bg4); color: var(--text);
-  border: 1px solid var(--border-md);
-  padding: 12px 22px; border-radius: 12px;
-  font-size: 14px; font-weight: 600;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.35);
-  opacity: 0; pointer-events: none;
-  transition: opacity .25s ease, transform .25s ease;
-  z-index: 500;
-}
-#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
 /* ─── NAV TABS ────────────────────────────────────── */
 .nav-wrap {
   background: var(--bg2);
@@ -671,7 +653,6 @@ body {
   .bracket-stage-title { font-size: 26px; }
   .nav-tab-label { display: none; }
   .nav-tab { padding: 0 18px; }
-  .progress-chip { display: none; }
 }
 </style>
 </head>
@@ -691,14 +672,7 @@ body {
     <span class="chip">⚽ 104 O'yin</span>
     <span class="chip">🏟 16 Stadium</span>
   </div>
-  <div class="toolbar">
-    <span class="chip progress-chip" id="progress-chip" title="To'ldirilgan guruh o'yinlari">📊 <b>0</b>/0</span>
-    <button class="theme-btn" onclick="exportPredictions()" title="Bashoratni yuklab olish (Export)">⬇️</button>
-    <button class="theme-btn" onclick="document.getElementById('import-file').click()" title="Bashoratni yuklash (Import)">⬆️</button>
-    <input type="file" id="import-file" accept="application/json,.json" style="display:none" onchange="importPredictions(this)">
-    <button class="theme-btn" onclick="resetPredictions()" title="Hammasini tozalash (Reset)">🗑️</button>
-    <button class="theme-btn" onclick="toggleTheme()" title="Mavzu o'zgartirish" id="theme-icon">🌙</button>
-  </div>
+  <button class="theme-btn" onclick="toggleTheme()" title="Mavzu o'zgartirish" id="theme-icon">🌙</button>
 </header>
 
 <!-- NAV TABS -->
@@ -1265,79 +1239,9 @@ function setScore(key,side,val){
   if(!state.scores[key])state.scores[key]={h:'',a:''};
   state.scores[key][side]=val===''?'':val;
   saveState();
-  updateProgress();
   const activeId=document.querySelector('.panel.active').id;
   if(activeId==='panel-groups')renderGroups();
   else refreshAll();
-}
-
-/* ─── PROGRESS ─── */
-function groupMatchStats(){
-  let total=0,done=0;
-  for(const gk in GM){
-    for(const m of GM[gk]){
-      total++;
-      const sc=state.scores[`${gk}_${m.h}_${m.a}`];
-      if(sc&&sc.h!==''&&sc.a!==''&&!isNaN(parseInt(sc.h))&&!isNaN(parseInt(sc.a)))done++;
-    }
-  }
-  return {total,done};
-}
-function updateProgress(){
-  const el=document.getElementById('progress-chip');
-  if(!el)return;
-  const s=groupMatchStats();
-  el.innerHTML=`📊 <b>${s.done}</b>/${s.total}`;
-}
-
-/* ─── TOAST ─── */
-function showToast(msg){
-  let t=document.getElementById('toast');
-  if(!t){t=document.createElement('div');t.id='toast';document.body.appendChild(t);}
-  t.textContent=msg;
-  t.classList.add('show');
-  clearTimeout(showToast._t);
-  showToast._t=setTimeout(()=>t.classList.remove('show'),2600);
-}
-
-/* ─── EXPORT / IMPORT / RESET ─── */
-function exportPredictions(){
-  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download='wc2026-bashorat.json';
-  document.body.appendChild(a);a.click();a.remove();
-  URL.revokeObjectURL(url);
-  showToast("Bashorat yuklab olindi ✓");
-}
-function importPredictions(input){
-  const file=input.files&&input.files[0];
-  if(!file)return;
-  const reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      const obj=JSON.parse(e.target.result);
-      if(!obj||typeof obj!=='object')throw new Error('bad');
-      state={
-        scores:(obj.scores&&typeof obj.scores==='object')?obj.scores:{},
-        thirdPicks:(obj.thirdPicks&&typeof obj.thirdPicks==='object')?obj.thirdPicks:{}
-      };
-      saveState();
-      renderGroups();refreshAll();updateProgress();
-      showToast("Bashorat yuklandi ✓");
-    }catch(err){
-      showToast("Xato: noto'g'ri fayl ✕");
-    }
-  };
-  reader.readAsText(file);
-  input.value='';
-}
-function resetPredictions(){
-  if(!confirm("Barcha natijalar va bashoratlar o'chiriladi. Davom etamizmi?"))return;
-  state={scores:{},thirdPicks:{}};
-  saveState();
-  renderGroups();refreshAll();updateProgress();
-  showToast("Hammasi tozalandi ✓");
 }
 
 /* ─── TABS ─── */
@@ -1362,7 +1266,6 @@ function refreshAll(){
 /* ─── INIT ─── */
 renderGroups();
 refreshAll();
-updateProgress();
 </script>
 </body>
 </html>
