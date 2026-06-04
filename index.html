@@ -280,6 +280,84 @@ body {
   color: var(--text-sec); cursor: pointer; font-size: 14px; line-height: 1;
 }
 .reply-x:hover { color: var(--red); }
+.msg-name, .msg-ava { cursor: pointer; }
+
+/* ─── PROFILE ─────────────────────────────────────── */
+.profile-wrap { max-width: 640px; margin: 0 auto; }
+.profile-card {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 24px; margin-bottom: 18px;
+}
+.profile-top { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+.profile-ava { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: var(--bg4); flex-shrink: 0; }
+.profile-ava-fb { display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 26px; }
+.profile-name { font-family: 'Syne', sans-serif; font-size: 20px; }
+.profile-sub { font-size: 12px; color: var(--text-sec); margin-top: 2px; }
+.profile-section-title { font-size: 13px; font-weight: 600; color: var(--text-sec); margin: 22px 0 12px; text-transform: uppercase; letter-spacing: .04em; }
+.swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+.swatch {
+  width: 34px; height: 34px; border-radius: 50%;
+  cursor: pointer; border: 2px solid transparent;
+  transition: transform var(--transition);
+}
+.swatch:hover { transform: scale(1.1); }
+.swatch.sel { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg); }
+.profile-preview { margin-top: 12px; font-size: 14px; color: var(--text-sec); }
+.profile-preview b { font-weight: 700; }
+.team-count { font-size: 12px; color: var(--text-dim); font-weight: 500; margin-left: 8px; }
+.team-group { margin-bottom: 14px; }
+.team-group-label { font-size: 11px; color: var(--text-dim); font-weight: 700; margin-bottom: 6px; }
+.team-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.team-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 12px; border-radius: 20px;
+  background: var(--bg3); border: 1px solid var(--border);
+  font-size: 13px; cursor: pointer;
+  transition: all var(--transition); user-select: none;
+}
+.team-chip:hover { background: var(--bg4); }
+.team-chip.sel { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.team-chip.dim { opacity: .4; }
+.profile-save {
+  margin-top: 8px; padding: 11px 26px; border: none;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+  color: #1a1300; font-family: inherit; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: filter var(--transition);
+}
+.profile-save:hover { filter: brightness(1.05); }
+.profile-login { text-align: center; padding: 40px 20px; color: var(--text-sec); }
+.profile-login .chat-login-btn { margin: 16px auto 0; }
+
+/* user view modal */
+.umodal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 600;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(3px);
+  align-items: center; justify-content: center; padding: 20px;
+}
+.umodal-overlay.show { display: flex; }
+.umodal {
+  width: 100%; max-width: 380px;
+  background: var(--card-bg); border: 1px solid var(--border-md);
+  border-radius: var(--radius-lg); padding: 24px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.umodal-top { display: flex; align-items: center; gap: 14px; }
+.umodal-ava { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; background: var(--bg4); flex-shrink: 0; }
+.umodal-ava-fb { display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 22px; }
+.umodal-name { font-family: 'Syne', sans-serif; font-size: 18px; }
+.umodal-title { font-size: 12px; color: var(--text-sec); margin: 18px 0 10px; text-transform: uppercase; letter-spacing: .04em; }
+.umodal-teams { display: flex; flex-direction: column; gap: 8px; }
+.umodal-team { display: flex; align-items: center; gap: 9px; font-size: 15px; }
+.umodal-team .tg { margin-left: auto; font-size: 11px; color: var(--text-dim); }
+.umodal-empty { color: var(--text-dim); font-size: 13px; }
+.umodal-close {
+  margin-top: 20px; width: 100%; padding: 10px;
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  background: var(--bg3); color: var(--text); font-family: inherit;
+  font-size: 14px; cursor: pointer; transition: background var(--transition);
+}
+.umodal-close:hover { background: var(--bg4); }
 @media (max-width: 700px) {
   .chat-wrap { height: calc(100vh - 180px); }
   .chat-name { width: 92px; }
@@ -864,6 +942,12 @@ body {
     </span>
     <span class="nav-tab-label">Suhbat</span>
   </div>
+  <div class="nav-tab" onclick="showPanel('profile',this)">
+    <span class="nav-tab-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
+    </span>
+    <span class="nav-tab-label">Profil</span>
+  </div>
 </nav>
 
 <!-- MAIN -->
@@ -932,6 +1016,14 @@ body {
     </div>
   </div>
 
+  <div class="panel" id="panel-profile">
+    <div class="profile-wrap" id="profile-wrap"></div>
+  </div>
+
+</div>
+
+<div class="umodal-overlay" id="user-modal" onclick="if(event.target===this)closeUserModal()">
+  <div class="umodal" id="user-modal-body"></div>
 </div>
 
 <div id="ko-custom-dropdown"></div>
@@ -1431,11 +1523,19 @@ function fmtTime(ts){
   const d=new Date(ts);
   return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
 }
-function userColorOf(m){
-  const key=String((chatMode==='firebase'&&m.uid)?m.uid:(m.name||'?'));
+function autoColor(key){
+  key=String(key||'?');
   let h=0;
   for(let i=0;i<key.length;i++)h=(h*31+key.charCodeAt(i))%360;
   return `hsl(${h},62%,58%)`;
+}
+function userColorOf(m){
+  if(chatMode==='firebase'&&m.uid){
+    const u=usersMap[m.uid];
+    if(u&&u.color)return u.color;   // profildagi rang ustun
+    return autoColor(m.uid);
+  }
+  return autoColor(m.name||'?');
 }
 // xabar egasini id orqali /users dan olamiz, bo'lmasa — eski xabardagi qiymat (fallback)
 function authorOf(m){
@@ -1477,10 +1577,11 @@ function renderChat(){
     const replyName=m.replyTo?(m.replyTo.name||nameByUid(m.replyTo.uid)):'';
     const quote=m.replyTo?`<div class="msg-reply-quote"><b>${escapeHtml(replyName)}</b><br>${escapeHtml(m.replyTo.text)}</div>`:'';
     // o'z xabarlarim: ism va avatar yashirin (o'ngda, oltin — shundoq ham bilinadi)
-    const avaSlot=mine?'':`<div class="msg-ava-slot">${grouped?'':avatarHtml(a.photo,a.name,color)}</div>`;
+    const uclick=m.uid?` onclick="openUserProfile('${m.uid}')"`:'';
+    const avaSlot=mine?'':`<div class="msg-ava-slot"${grouped?'':uclick}>${grouped?'':avatarHtml(a.photo,a.name,color)}</div>`;
     const meta=mine
       ? (grouped?'':`<div class="msg-meta">${fmtTime(m.ts)}</div>`)
-      : (grouped?'':`<div class="msg-meta"><span class="msg-name" style="color:${color}">${escapeHtml(a.name)}</span> · ${fmtTime(m.ts)}</div>`);
+      : (grouped?'':`<div class="msg-meta"><span class="msg-name" style="color:${color}"${uclick}>${escapeHtml(a.name)}</span> · ${fmtTime(m.ts)}</div>`);
     const bubbleStyle=mine?'':` style="border-left:3px solid ${color}"`;
     return `<div class="msg${mine?' me':''}${grouped?' grouped':''}">
       ${avaSlot}
@@ -1584,14 +1685,134 @@ function activateFirebaseChat(){
   if(window.fbAuth){
     window.fbAuth.onChange(u=>{
       currentUser=u;
-      if(u&&window.fbChat.upsertUser)window.fbChat.upsertUser(u.uid,{name:u.name,photo:u.photo});
-      renderChatFoot();renderChat();
+      if(u&&window.fbChat.upsertUser)window.fbChat.upsertUser(u.uid,{name:u.name,photo:u.photo,ts:Date.now()});
+      renderChatFoot();renderChat();renderProfile();
     });
   }
   renderChatFoot();
 }
 if(window.fbChat)activateFirebaseChat();
 else window.addEventListener('fbchat-ready',activateFirebaseChat);
+
+/* ─── PROFILE ─── */
+const PRESET_COLORS=['#e8b84b','#f59e0b','#ef4444','#ec4899','#a855f7','#6366f1','#3b82f6','#06b6d4','#14b8a6','#22c55e','#84cc16','#f97316'];
+let profileDraft=null;    // tahrirlanayotgan nusxa {color, favTeams:[]}
+let TEAM_LIST=null;
+function teamList(){
+  if(TEAM_LIST)return TEAM_LIST;
+  TEAM_LIST=[];
+  for(const[gk,gv]of Object.entries(GROUPS))gv.teams.forEach(t=>TEAM_LIST.push({n:t.n,f:t.f,group:gk}));
+  return TEAM_LIST;
+}
+function teamInfoOf(name){
+  return teamList().find(t=>t.n===name)||{};
+}
+function favTeamsArr(v){
+  if(Array.isArray(v))return v.filter(Boolean);
+  if(v&&typeof v==='object')return Object.values(v).filter(Boolean);
+  return [];
+}
+function showProfile(){
+  const saved=(currentUser&&usersMap[currentUser.uid])||{};
+  profileDraft={color:saved.color||'',favTeams:favTeamsArr(saved.favTeams).slice(0,3)};
+  renderProfile();
+}
+function renderProfile(){
+  const box=document.getElementById('profile-wrap');
+  if(!box)return;
+  if(chatMode!=='firebase'){
+    box.innerHTML=`<div class="profile-card profile-login">Profil faqat onlayn (Firebase) rejimida ishlaydi.</div>`;
+    return;
+  }
+  if(!currentUser){
+    box.innerHTML=`<div class="profile-card profile-login">Profilni sozlash uchun tizimga kiring.
+      <button class="chat-login-btn" onclick="chatSignIn()">${GOOGLE_ICON}Google orqali kirish</button></div>`;
+    return;
+  }
+  if(!profileDraft){
+    const saved=usersMap[currentUser.uid]||{};
+    profileDraft={color:saved.color||'',favTeams:favTeamsArr(saved.favTeams).slice(0,3)};
+  }
+  const d=profileDraft;
+  const pc=d.color||autoColor(currentUser.uid);
+  const ini=escapeHtml((String(currentUser.name)[0]||'?').toUpperCase());
+  const ava=currentUser.photo
+    ? `<img class="profile-ava" src="${escapeHtml(currentUser.photo)}" referrerpolicy="no-referrer" alt="">`
+    : `<div class="profile-ava profile-ava-fb" style="background:${pc}">${ini}</div>`;
+  const swatches=PRESET_COLORS.map(c=>`<div class="swatch${d.color===c?' sel':''}" style="background:${c}" onclick="pickColor('${c}')" title="${c}"></div>`).join('');
+  const byGroup={};
+  teamList().forEach((t,idx)=>{(byGroup[t.group]=byGroup[t.group]||[]).push({...t,idx});});
+  const groupsHtml=Object.keys(byGroup).map(gk=>{
+    const chips=byGroup[gk].map(t=>{
+      const sel=d.favTeams.includes(t.n);
+      const dim=!sel&&d.favTeams.length>=3;
+      return `<div class="team-chip${sel?' sel':''}${dim?' dim':''}" onclick="toggleTeamIdx(${t.idx})">${t.f} ${escapeHtml(t.n)}</div>`;
+    }).join('');
+    return `<div class="team-group"><div class="team-group-label">GURUH ${gk}</div><div class="team-chips">${chips}</div></div>`;
+  }).join('');
+  box.innerHTML=`
+    <div class="profile-card">
+      <div class="profile-top">${ava}
+        <div><div class="profile-name">${escapeHtml(currentUser.name)}</div>
+        <div class="profile-sub">Google profili</div></div>
+      </div>
+      <div class="profile-section-title">Suhbat rangi</div>
+      <div class="swatches">${swatches}</div>
+      <div class="profile-preview">Ko'rinishi: <b style="color:${pc}">${escapeHtml(currentUser.name)}</b></div>
+    </div>
+    <div class="profile-card">
+      <div class="profile-section-title">Sevimli jamoalar <span class="team-count">${d.favTeams.length}/3</span></div>
+      ${groupsHtml}
+    </div>
+    <button class="profile-save" onclick="saveProfile()">Saqlash</button>`;
+}
+function pickColor(c){
+  if(!profileDraft)return;
+  profileDraft.color=(profileDraft.color===c)?'':c;  // qayta bossa — bekor qiladi
+  renderProfile();
+}
+function toggleTeamIdx(idx){
+  const t=teamList()[idx];
+  if(t)toggleTeam(t.n);
+}
+function toggleTeam(name){
+  if(!profileDraft)return;
+  const i=profileDraft.favTeams.indexOf(name);
+  if(i>=0)profileDraft.favTeams.splice(i,1);
+  else{ if(profileDraft.favTeams.length>=3)return; profileDraft.favTeams.push(name); }
+  renderProfile();
+}
+function saveProfile(){
+  if(!currentUser||!profileDraft)return;
+  window.fbChat.upsertUser(currentUser.uid,{
+    color: profileDraft.color||null,
+    favTeams: profileDraft.favTeams.length?profileDraft.favTeams:null
+  }).then(()=>showToast("Profil saqlandi ✓"))
+    .catch(err=>{console.error(err);alert("Saqlashda xato: "+(err.code||err.message));});
+}
+function openUserProfile(uid){
+  if(!uid)return;
+  const u=usersMap[uid]||{};
+  const name=u.name||'Anonim';
+  const color=u.color||autoColor(uid);
+  const ini=escapeHtml((String(name)[0]||'?').toUpperCase());
+  const ava=u.photo
+    ? `<img class="umodal-ava" src="${escapeHtml(u.photo)}" referrerpolicy="no-referrer" alt="">`
+    : `<div class="umodal-ava umodal-ava-fb" style="background:${color}">${ini}</div>`;
+  const teams=favTeamsArr(u.favTeams);
+  const teamsHtml=teams.length
+    ? `<div class="umodal-teams">${teams.map(n=>{const t=teamInfoOf(n);return `<div class="umodal-team">${t.f||'⚽'} ${escapeHtml(n)}<span class="tg">${t.group?'GURUH '+t.group:''}</span></div>`;}).join('')}</div>`
+    : `<div class="umodal-empty">Jamoa tanlamagan</div>`;
+  document.getElementById('user-modal-body').innerHTML=`
+    <div class="umodal-top">${ava}<div class="umodal-name" style="color:${color}">${escapeHtml(name)}</div></div>
+    <div class="umodal-title">Sevimli jamoalar</div>
+    ${teamsHtml}
+    <button class="umodal-close" onclick="closeUserModal()">Yopish</button>`;
+  document.getElementById('user-modal').classList.add('show');
+}
+function closeUserModal(){
+  document.getElementById('user-modal').classList.remove('show');
+}
 
 /* ─── TABS ─── */
 function showPanel(name,el){
@@ -1601,6 +1822,7 @@ function showPanel(name,el){
   el.classList.add('active');
   if(name==='groups')renderGroups();
   else if(name==='chat')renderChat();
+  else if(name==='profile')showProfile();
   else refreshAll();
 }
 
@@ -1622,7 +1844,7 @@ renderChatFoot();
 <!-- ─── FIREBASE (Realtime Database real-time chat) ─── -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-import { getDatabase, ref, push, set, query, limitToLast, onValue }
+import { getDatabase, ref, push, update, query, limitToLast, onValue }
   from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
@@ -1661,14 +1883,16 @@ try {
   };
 
   window.fbChat = {
-    // foydalanuvchi profilini /users/{uid} ga yozish (kirgan paytda)
-    upsertUser(uid, profile){
+    // profilni /users/{uid} ga qisman yozish (update — boshqa maydonlarni saqlaydi)
+    upsertUser(uid, data){
       if(!uid) return Promise.resolve();
-      return set(ref(db, "users/" + uid), {
-        name: String(profile.name || "Anonim").slice(0, 40),
-        photo: profile.photo || null,
-        ts: Date.now()
-      });
+      const payload = {};
+      if (data.name !== undefined) payload.name = String(data.name || "Anonim").slice(0, 40);
+      if (data.photo !== undefined) payload.photo = data.photo || null;
+      if (data.ts !== undefined) payload.ts = data.ts;
+      if (data.color !== undefined) payload.color = data.color || null;
+      if (data.favTeams !== undefined) payload.favTeams = data.favTeams || null;
+      return update(ref(db, "users/" + uid), payload);
     },
     // barcha profillarni kuzatish: {uid: {name, photo}}
     onUsers(cb){
